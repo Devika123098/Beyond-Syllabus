@@ -62,7 +62,7 @@ Syllabus:
     const chatCompletion = await ai.chat.completions.create({
       messages: [{ role: "user", content: promptText }],
       model: "qwen/qwen3-32b",
-      temperature: 0.6,
+      temperature: 0.5,
       max_completion_tokens: 2048,
       top_p: 0.95,
     });

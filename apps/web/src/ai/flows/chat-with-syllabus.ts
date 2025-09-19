@@ -59,7 +59,7 @@ User's Message: "${input.message}"
     const chatCompletion = await ai.chat.completions.create({
       messages: [{ role: "user", content: promptText }],
       model: input.model || "openai/gpt-oss-20b",
-      temperature: 0.9,
+      temperature: 0.5,
       max_completion_tokens: 2048,
       top_p: 0.95,
     });
