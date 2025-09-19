@@ -1,5 +1,5 @@
 "use client";
-import "katex/dist/katex.min.css"; 
+import "katex/dist/katex.min.css";
 import React, { useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import remarkMath from "remark-math";
@@ -26,7 +26,7 @@ import {
   Speaker,
   MessageCircle,
 } from "lucide-react";
-import ModelSelector from "@/components/common/ModelSelector";
+import ModelSelector from "@/components/common/ModelSelector/ModelSelector";
 
 interface Message {
   role: "system" | "user" | "assistant";
@@ -145,7 +145,8 @@ export default function DesktopChatLayout({
                   key={idx}
                   className="flex items-center justify-between gap-2"
                 >
-                  <span className="text-xs text-muted-foreground">
+                  <span 
+                  className="text-xs text-muted-foreground">
                     {topic.title}
                   </span>
                   <button
@@ -197,9 +198,8 @@ export default function DesktopChatLayout({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`flex items-start gap-3 w-full ${
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  }`}
+                  className={`flex items-start gap-3 w-full ${msg.role === "user" ? "justify-end" : "justify-start"
+                    }`}
                 >
                   {msg.role === "assistant" && (
                     <Avatar className="w-8 h-8 border">
@@ -211,11 +211,10 @@ export default function DesktopChatLayout({
                   {msg.content ? (
                     <div className="relative  group max-w-md md:max-w-lg">
                       <div
-                        className={`rounded-2xl px-4 py-3 text-base shadow-md prose prose-sm dark:prose-invert  bg-black/10 prose-headings:font-semibold prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 ${
-                          msg.role === "user"
+                        className={`rounded-2xl px-4 py-3 text-base shadow-md prose prose-sm dark:prose-invert  bg-black/10 prose-headings:font-semibold prose-p:my-2 prose-ul:my-2 prose-li:my-0.5 ${msg.role === "user"
                             ? "bg-primary text-primary-foreground rounded-br-none"
                             : "text-card-foreground rounded-bl-none border"
-                        }`}
+                          }`}
                       >
                         <ReactMarkdown
                           remarkPlugins={[remarkMath, remarkGfm]}

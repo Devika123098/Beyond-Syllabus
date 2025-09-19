@@ -21,7 +21,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import "katex/dist/katex.min.css";
-import ModelSelector from "@/components/common/ModelSelector";
+import ModelSelector from "@/components/common/ModelSelector/ModelSelector";
 
 interface MobileChatPanelsProps {
   setMessages: (messages: Message[]) => void;
@@ -43,7 +43,6 @@ interface MobileChatPanelsProps {
   setActiveTab: (tab: "ai" | "quick" | "history") => void;
   chatEndRef: React.RefObject<HTMLDivElement>;
   moduleTitle: string;
-  moduleContent: string;
   copyToClipboard: (text: string, messageIndex: number) => void;
   handleSuggestionClick: (text: string) => void;
   handleSend: () => void;
@@ -67,8 +66,6 @@ const MobileChatPanels: FC<MobileChatPanelsProps> = ({
   setChatHistory,
   chatEndRef,
   moduleTitle,
-
-  moduleContent,
   copyToClipboard,
   handleSuggestionClick,
   handleSend,
@@ -134,7 +131,7 @@ const MobileChatPanels: FC<MobileChatPanelsProps> = ({
 
       {/* AI Panel */}
       <div
-        className={`md:hidden flex-1 h-[100vh] overflow-auto py-4 ${
+        className={`flex-1 h-[100vh] overflow-auto py-4 ${
           activeTab === "ai" ? "block" : "hidden"
         }`}
       >

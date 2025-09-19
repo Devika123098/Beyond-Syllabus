@@ -155,7 +155,7 @@ export default function MobileChatLayout() {
   };
 
   return (
-    <div className="md:hidden flex-1 w-full">
+    <div className="flex-1 w-full">
       <MobileChatPanels
         messages={messages}
         input={input}
@@ -171,7 +171,6 @@ export default function MobileChatLayout() {
         setActiveTab={setActiveTab}
         chatEndRef={chatEndRef}
         moduleTitle={moduleTitle}
-        moduleContent={moduleContent}
         setMessages={setMessages}
         setChatHistory={setChatHistory}
         copyToClipboard={copyToClipboard}

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import styles from './ModelSelector.module.css';
 
 interface Model {
   id: string;
@@ -46,13 +47,13 @@ export default function ModelSelector({ onModelChange }: ModelSelectorProps) {
   };
 
   return (
-    <div className="flex flex-col w-full px-4   items-start gap-2 mb-4">
-      <span className="">Model</span>
-      <div className=" border-gray-300 text-wrap w-fit flex justify-start">
+    <div className={styles.modelContainer}>
+      <span className={styles.label}>Model</span>
+      <div className={styles.selectWrapper}>
         <select
           value={selectedModel}
           onChange={(e) => handleChange(e.target.value)}
-          className="border text-wrap rounded-lg px-2 py-1 text-sm bg-background text-foreground max-[900px]:w-[150px] w-fit"
+          className={styles.select}
         >
           {models.map((m) => (
             <option key={m.id} value={m.id}>
@@ -62,5 +63,6 @@ export default function ModelSelector({ onModelChange }: ModelSelectorProps) {
         </select>
       </div>
     </div>
+
   );
 }
