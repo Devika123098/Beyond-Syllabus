@@ -80,16 +80,16 @@ export function Footer() {
             <div>
               <h3 className="text-sm font-semibold mb-3">Resources</h3>
               <nav className="flex flex-col gap-2">
-                <FooterLink href="#">Contribution Guide</FooterLink>
-                <FooterLink href="#">Code of Conduct</FooterLink>
-                <FooterLink href="#">License</FooterLink>
+                <FooterLink href="https://github.com/The-Purple-Movement/Beyond-Syllabus">Contribution Guide</FooterLink>
+                <FooterLink href="https://github.com/The-Purple-Movement/Beyond-Syllabus">Code of Conduct</FooterLink>
+                <FooterLink href="https://github.com/The-Purple-Movement/Beyond-Syllabus">License</FooterLink>
               </nav>
             </div>
             <div>
               <h3 className="text-sm font-semibold mb-3">Legal</h3>
               <nav className="flex flex-col gap-2">
-                <FooterLink href="#">Terms of Service</FooterLink>
-                <FooterLink href="#">Privacy Policy</FooterLink>
+                <FooterLink href="https://github.com/The-Purple-Movement/Beyond-Syllabus">Terms of Service</FooterLink>
+                <FooterLink href="https://github.com/The-Purple-Movement/Beyond-Syllabus">Privacy Policy</FooterLink>
               </nav>
             </div>
           </div>
