@@ -44,6 +44,14 @@ function formatSemesterName(semesterId: string): string {
   return `Semester ${semesterId.replace("s", "").replace(/^0+/, "")}`;
 }
 
+// Enhanced sorting function to handle various semester ID formats
+function getSemesterNumber(semesterId: string): number {
+  // Handle different formats: s1, s01, s2, sem1, semester1, 1, etc.
+  const cleaned = semesterId.toLowerCase().replace(/[^0-9]/g, '');
+  const num = Number.parseInt(cleaned, 10);
+  return Number.isNaN(num) ? 999 : num; // Put invalid entries at the end
+}
+
 const stepVariants = {
   hidden: { opacity: 0, x: 50 },
   visible: { opacity: 1, x: 0 },
@@ -421,17 +429,7 @@ export function SelectionForm() {
                         className="grid grid-cols-2 gap-3 sm:grid-cols-4"
                       >
                         {Object.keys(selectedSchemeData)
-                          .sort((a, b) => {
-                            const getNumericPart = (semesterId: string) => {
-                              const match = semesterId.match(/\d+/);
-                              return match ? Number.parseInt(match[0], 10) : 0;
-                            };
-                            
-                            const numA = getNumericPart(a);
-                            const numB = getNumericPart(b);
-                            
-                            return numA - numB;
-                          })
+                          .sort((a, b) => getSemesterNumber(a) - getSemesterNumber(b))
                           .map((semesterId) => {
                             const handleSemesterClick = () => {
                               handleSemesterSelect(semesterId);
