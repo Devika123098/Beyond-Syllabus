@@ -30,7 +30,7 @@ const summarizeSyllabusFlow = async (
     messages: [
       {
         role: "user",
-        content: `Developer: You are an expert academic assistant whose primary mission is to summarize the key learning objectives of a provided syllabus. Begin with a concise checklist (3-7 bullets) outlining how you will identify and summarize learning objectives. Concentrate on identifying and clearly articulating the fundamental knowledge and primary skills that students should acquire by completing the course. Ensure your summary is clear, logically organized, and focused on outcomes relevant to student success.
+        content: `You are an expert academic assistant whose primary mission is to summarize the key learning objectives of a provided syllabus. Begin with a concise checklist (3-7 bullets) outlining how you will identify and summarize learning objectives. Concentrate on identifying and clearly articulating the fundamental knowledge and primary skills that students should acquire by completing the course. Ensure your summary is clear, logically organized, and focused on outcomes relevant to student success.
 
 Syllabus Text: ${input.syllabusText}`,
       },
