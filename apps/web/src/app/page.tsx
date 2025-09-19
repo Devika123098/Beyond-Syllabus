@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,35 +11,66 @@ import {
   Sparkles,
   Loader2,
 } from "lucide-react";
-import { Header } from "@/components/common/Header";
-import { Footer } from "@/components/common/Footer";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FooterDark } from "@/components/common/footerDark";
 
-// Full-screen loader during asset preload
-function FullScreenLoader() {
+const Header = lazy(() => import("@/components/common/Header").then(module => ({ default: module.Header })));
+const Footer = lazy(() => import("@/components/common/Footer").then(module => ({ default: module.Footer })));
+const FooterDark = lazy(() => import("@/components/common/footerDark").then(module => ({ default: module.FooterDark })));
+
+function ModernLoader(): JSX.Element {
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#030013] z-[9999]">
-      <Loader2 className="h-10 w-10 animate-spin text-purple-500" />
-      <p className="mt-4 text-white text-lg">Loading...</p>
+      <div className="relative">
+        <div className="w-16 h-16 border-4 border-purple-200/20 border-t-purple-500 rounded-full animate-spin"/>
+        <div className="absolute top-2 left-2 w-12 h-12 border-4 border-transparent border-t-purple-400 rounded-full animate-spin animation-delay-200"/>
+        <div className="absolute top-4 left-4 w-8 h-8 border-4 border-transparent border-t-purple-300 rounded-full animate-spin animation-delay-400"/>
+      </div>
+      <div className="mt-6 flex space-x-1">
+        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"/>
+        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce animation-delay-100"/>
+        <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce animation-delay-200"/>
+      </div>
+      <p className="mt-4 text-white text-lg font-medium">Loading Beyond Syllabus...</p>
+      <style jsx>{`
+        .animation-delay-100 {
+          animation-delay: 0.1s;
+        }
+        .animation-delay-200 {
+          animation-delay: 0.2s;
+        }
+        .animation-delay-400 {
+          animation-delay: 0.4s;
+        }
+      `}</style>
     </div>
   );
 }
 
-export default function Home() {
+function ComponentLoader(): JSX.Element {
+  return (
+    <div className="flex items-center justify-center p-4">
+      <div className="flex space-x-2">
+        <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"/>
+        <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse animation-delay-100"/>
+        <div className="w-3 h-3 bg-purple-300 rounded-full animate-pulse animation-delay-200"/>
+      </div>
+    </div>
+  );
+}
+
+export default function Home(): JSX.Element {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [loadingRoute, setLoadingRoute] = useState<string | null>(null);
-  const [isLoadingAssets, setIsLoadingAssets] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [isLoadingAssets, setIsLoadingAssets] = useState<boolean>(true);
+  const [mounted, setMounted] = useState<boolean>(false);
 
-  // Preload image assets
-  const preloadImages = (urls: string[]) => {
+  const preloadImages = (urls: string[]): Promise<void[]> => {
     return Promise.all(
       urls.map(
-        (url) =>
+        (url: string) =>
           new Promise<void>((resolve) => {
             const img = new Image();
             img.src = url;
@@ -52,24 +83,25 @@ export default function Home() {
 
   useEffect(() => {
     setMounted(true);
-    const images = ["/hero-img.webp", "/img-mob.svg", "/white-bg.png"];
+    const images: string[] = ["/hero-img.webp", "/img-mob.svg", "/white-bg.png"];
 
     preloadImages(images).then(() => {
       setTimeout(() => setIsLoadingAssets(false), 800);
     });
   }, []);
 
-  const navigateWithDelay = async (path: string, delay: number) => {
+  const navigateWithDelay = async (path: string, delay: number): Promise<void> => {
     setLoadingRoute(path);
-    await new Promise((res) => setTimeout(res, delay));
+    await new Promise<void>((resolve) => setTimeout(resolve, delay));
     router.push(path);
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-[#030013]">
-      <Header />
+      <Suspense fallback={<ComponentLoader />}>
+        <Header />
+      </Suspense>
 
-      {/* Fullscreen loader */}
       <AnimatePresence>
         {isLoadingAssets && (
           <motion.div
@@ -78,12 +110,11 @@ export default function Home() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
           >
-            <FullScreenLoader />
+            <ModernLoader />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Main Content */}
       <main className="flex-grow flex flex-col">
         <section
           className={`w-full pt-16 pb-20 flex justify-center items-center h-screen ${
@@ -132,7 +163,7 @@ export default function Home() {
               >
                 {loadingRoute === "/chat" ? (
                   <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin text-amber-400" />
+                    <div className="w-4 h-4 mr-2 border-2 border-amber-400 border-t-transparent rounded-full animate-spin"/>
                     Loading AI Chat...
                   </>
                 ) : (
@@ -151,7 +182,7 @@ export default function Home() {
               >
                 {loadingRoute === "/select" ? (
                   <>
-                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"/>
                     Loading Syllabus...
                   </>
                 ) : (
@@ -165,7 +196,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Features Section */}
         <section
           className={`w-full py-20 md:py-28 lg:py-32 ${
             mounted && resolvedTheme === "dark" ? "bg-[#030013]" : "bg-white"
@@ -209,22 +239,21 @@ export default function Home() {
         </section>
       </main>
       <div className="some-wrapper-class">
-        {mounted && resolvedTheme === "dark" ? <FooterDark /> : <Footer />}
+        <Suspense fallback={<ComponentLoader />}>
+          {mounted && resolvedTheme === "dark" ? <FooterDark /> : <Footer />}
+        </Suspense>
       </div>
     </div>
   );
 }
 
-// Feature Card Component
-function FeatureCard({
-  icon,
-  title,
-  description,
-}: {
+interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
-}) {
+}
+
+function FeatureCard({ icon, title, description }: FeatureCardProps): JSX.Element {
   return (
     <div>
       <div className="bg-[#D9D9D9]/10 p-4 rounded-t-full flex justify-center w-[70px] mx-auto h-[50px] items-center">
