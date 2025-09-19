@@ -25,7 +25,7 @@ import {
 import ErrorDisplay from "@/components/common/ErrorDisplay";
 import { AnimatedDiv } from "@/components/common/AnimatedDiv";
 import { Footer } from "@/components/common/Footer";
-import { useGetDirectoryStructure } from "@/hooks/query";
+// import { useGetDirectoryStructure } from "@/hooks/query";
 import { useData } from "@/contexts";
 
 interface SubjectsPageProps {
@@ -114,7 +114,6 @@ export default function SubjectsPage({ params }: SubjectsPageProps) {
   const handleViewSyllabus = async (subjectId: string, subjectName: string) => {
     setLoadingSubject(subjectId);
 
-    // Add aesthetic delay for smooth UX
     await new Promise((resolve) => setTimeout(resolve, 700));
 
     router.push(
@@ -148,25 +147,37 @@ export default function SubjectsPage({ params }: SubjectsPageProps) {
   if (!dataPath) {
     notFound();
   }
+
   function capitalizeWords(str: string | undefined): string {
     if (!str) return "";
     return str
-      .replace(/-/g, " ") // replace all "-" with spaces
+      .replace(/-/g, " ")
       .split(" ")
       .map((word) =>
         word.length > 0 ? word.charAt(0).toUpperCase() + word.slice(1) : ""
       )
       .join(" ");
   }
+
   const { university, program, scheme, semester } = dataPath;
 
+  // Build proper breadcrumb items with href for navigation
   const breadcrumbItems = [
     { label: "Home", href: "/" },
     { label: "Select", href: "/select" },
-    { label: university.name },
-    { label: program.name },
-    { label: scheme.name },
-    { label: semester.name },
+    { 
+      label: university.name, 
+      href: `/select?step=2&university=${resolvedParams.university}` 
+    },
+    { 
+      label: program.name, 
+      href: `/select?step=3&university=${resolvedParams.university}&program=${resolvedParams.program}` 
+    },
+    { 
+      label: scheme.name, 
+      href: `/select?step=4&university=${resolvedParams.university}&program=${resolvedParams.program}&scheme=${resolvedParams.scheme}` 
+    },
+    { label: semester.name }, // Current page - no href
   ];
 
   return (
@@ -193,7 +204,7 @@ export default function SubjectsPage({ params }: SubjectsPageProps) {
                   return (
                     <Card
                       key={subject.id}
-                      className="h-full w-72 overflow-hidden flex flex-col justify-between rounded-2xl hover:border-primary hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-white/10  backdrop-blur-sm"
+                      className="h-full w-72 overflow-hidden flex flex-col justify-between rounded-2xl hover:border-primary hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-white/10 backdrop-blur-sm"
                     >
                       <CardHeader>
                         <div className="flex justify-between items-start">
