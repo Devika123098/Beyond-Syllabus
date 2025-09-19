@@ -87,7 +87,7 @@ ${conversationHistory}
 **STUDENT QUESTION:** "${input.message}"
 
 **SPECIFIC INSTRUCTIONS:**
-- Write in natural, conversational paragraphs (400-600 words)
+- Write in natural, conversational paragraphs (100-250 words)
 - Avoid bullet points, numbered lists, or structured formatting
 - Integrate syllabus context naturally throughout your explanation when available
 - Use transitional phrases to create smooth flow between ideas
