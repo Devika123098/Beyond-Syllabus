@@ -2,83 +2,168 @@
 
 import { ai } from "@/ai/ai";
 
-export interface SummarizeSyllabusInput {
-  syllabusText: string;
+export interface Message {
+  role: "user" | "assistant" | "system";
+  content: string;
 }
 
-export interface SummarizeSyllabusOutput {
-  summary: string;
+export interface ChatWithSyllabusInput {
+  history: Message[];
+  message: string;
+  model?: string;
+  syllabusContext?: string; // Added for context-aware filtering
 }
 
-export async function summarizeSyllabus(
-  input: SummarizeSyllabusInput
-): Promise<SummarizeSyllabusOutput> {
-  return summarizeSyllabusFlow(input);
+export interface ChatWithSyllabusOutput {
+  response: string;
+  suggestions?: string[];
 }
 
-const summarizeSyllabusFlow = async (
-  input: SummarizeSyllabusInput
-): Promise<SummarizeSyllabusOutput> => {
-  const chatCompletion = await ai.chat.completions.create({
-    messages: [
-      {
-        role: "system",
-        content: "You are an expert academic curriculum analyst specializing in educational content summarization. Your expertise includes identifying core learning objectives, skill development outcomes, and knowledge domains across various academic disciplines."
-      },
-      {
-        role: "user",
-        content: `Please analyze the following syllabus and create a comprehensive summary following this structure:
+const chatWithSyllabusFlow = async (
+  input: ChatWithSyllabusInput
+): Promise<ChatWithSyllabusOutput> => {
+  // Content filtering function
+  const isEducationalQuery = (message: string): boolean => {
+    const nonEducationalKeywords = [
+      'messi', 'ronaldo', 'football', 'soccer', 'celebrity', 'movie', 'song', 
+      'politics', 'religion', 'dating', 'personal life', 'gossip', 'entertainment',
+      'sports', 'music', 'tv show', 'netflix', 'youtube', 'instagram', 'tiktok',
+      'gaming', 'game', 'food recipe', 'cooking', 'weather', 'news', 'current events'
+    ];
+    
+    const educationalKeywords = [
+      'explain', 'define', 'concept', 'theory', 'formula', 'solve', 'calculate',
+      'understand', 'learn', 'study', 'homework', 'assignment', 'exam', 'test',
+      'subject', 'course', 'syllabus', 'curriculum', 'chapter', 'lesson'
+    ];
+    
+    const messageLower = message.toLowerCase();
+    const hasNonEducational = nonEducationalKeywords.some(keyword => 
+      messageLower.includes(keyword)
+    );
+    const hasEducational = educationalKeywords.some(keyword => 
+      messageLower.includes(keyword)
+    );
+    
+    return !hasNonEducational || hasEducational;
+  };
 
-**ANALYSIS FRAMEWORK:**
-1. First, identify the subject area and academic level
-2. Extract core learning objectives and outcomes
-3. Categorize knowledge domains and skill areas
-4. Highlight practical applications and assessments
+  // Check if query is educational
+  if (!isEducationalQuery(input.message)) {
+    return {
+      response: "I'm an educational assistant focused on helping with academic studies and coursework. I can only answer questions related to your syllabus, course materials, and educational topics. Please ask me something about your studies! 📚",
+      suggestions: [
+        "Explain a concept from your syllabus",
+        "Help with a practice problem",
+        "Clarify course material"
+      ]
+    };
+  }
 
-**OUTPUT FORMAT:**
-Create a well-structured summary that includes:
+  const conversationHistory = input.history
+    .map((msg) => `${msg.role}: ${msg.content}`)
+    .join("\n");
 
-## Course Overview
-- Subject area and level
-- Duration and credit information (if available)
+  const promptText = `You are a specialized educational AI tutor with STRICT BOUNDARIES. You must ONLY respond to academic and educational queries related to the provided syllabus context.
 
-## Key Learning Objectives
-- List 4-6 primary learning goals
-- Focus on what students will be able to DO after completion
+**CORE IDENTITY & CONSTRAINTS:**
+- Role: Academic Study Assistant specializing in curriculum-based learning
+- Scope: ONLY educational content, course materials, and study-related topics
+- Boundaries: NEVER discuss celebrities, sports, entertainment, politics, personal topics, or non-academic subjects
 
-## Core Knowledge Areas
-- Main topics and concepts covered
-- Theoretical foundations
-- Practical applications
+**MANDATORY CONTENT FILTERING:**
+- If a user asks about non-educational topics (celebrities, sports, movies, personal questions, etc.), respond with: "I'm focused exclusively on helping with your academic studies. Please ask me about concepts, assignments, or topics from your coursework."
+- ALWAYS redirect to educational content when off-topic questions are asked
+- You are NOT a general chatbot - you are an academic tutor ONLY
 
-## Skills Development
-- Technical skills gained
-- Analytical and critical thinking abilities
-- Professional competencies
+**SYLLABUS CONTEXT:**
+${input.syllabusContext || "Focus on general academic subjects and study skills"}
 
-## Assessment Methods
-- Types of evaluations mentioned
-- Projects and practical work
+**EDUCATIONAL METHODOLOGY:**
+1. 🎯 **ASSESS**: Determine if the question is educational and syllabus-relevant
+2. 📖 **TEACH**: Provide clear, structured explanations with examples
+3. 🧠 **ENGAGE**: Create practice problems or thought-provoking questions
+4. ✅ **VERIFY**: Check understanding and correct misconceptions
+5. 🔄 **REINFORCE**: Encourage active learning and self-explanation
 
-**REQUIREMENTS:**
-- Use clear, concise language suitable for students
-- Prioritize actionable learning outcomes
-- Maintain academic tone while being accessible
-- Limit summary to 300-400 words
-- Use bullet points and headers for readability
+**RESPONSE GUIDELINES:**
+- Keep explanations concise but comprehensive (150-300 words)
+- Use bullet points and clear structure
+- Include relevant examples from the syllabus context
+- End with 2-3 follow-up questions to deepen understanding
+- Maintain encouraging, professional tone
+- Use minimal emojis (1-2 per response maximum)
 
-**SYLLABUS TEXT:**
-${input.syllabusText}
+**CONVERSATION HISTORY:**
+${conversationHistory}
 
-Generate the summary now, ensuring it captures the essence of what students will learn and achieve in this course.`
-      },
-    ],
-    model: "llama-3.1-8b-instant",
-    temperature: 0.3, // Reduced for more consistent, factual output
-    max_completion_tokens: 1024,
-    top_p: 0.85, // Slightly reduced for more focused responses
-  });
+**CURRENT STUDENT QUESTION:** "${input.message}"
 
-  const summary = chatCompletion.choices?.[0]?.message?.content || "";
-  return { summary };
+**INSTRUCTIONS:**
+1. First, verify this is an educational question
+2. If non-educational, politely redirect to academic topics
+3. If educational, provide structured learning support following the methodology above
+4. Always stay within the bounds of academic assistance
+
+Respond now:`;
+
+  try {
+    const chatCompletion = await ai.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "You are an educational AI assistant that ONLY helps with academic studies, coursework, and educational topics. You must refuse to discuss non-educational topics and redirect users to study-related questions."
+        },
+        {
+          role: "user",
+          content: promptText
+        }
+      ],
+      model: input.model || "llama-3.1-8b-instant",
+      temperature: 0.4, // Reduced for more consistent, focused responses
+      max_completion_tokens: 1024, // Reduced for more concise responses
+      top_p: 0.85,
+    });
+
+    const outputText = chatCompletion.choices?.[0]?.message?.content || "";
+
+    // Additional safety check on response
+    const containsNonEducational = /\b(messi|ronaldo|celebrity|entertainment|movie|politics)\b/i.test(outputText);
+    if (containsNonEducational) {
+      return {
+        response: "I'm designed to focus exclusively on educational content and academic support. Let's discuss your coursework, assignments, or study topics instead! 📚",
+        suggestions: [
+          "Ask about a specific concept from your syllabus",
+          "Request help with practice problems",
+          "Clarify difficult course material"
+        ]
+      };
+    }
+
+    return {
+      response: outputText,
+      suggestions: [
+        "Can you explain this concept differently?",
+        "Give me a practice problem on this topic",
+        "What are common mistakes students make here?"
+      ]
+    };
+
+  } catch (e) {
+    console.error("Error in educational chat flow:", e);
+    return {
+      response: "I'm having trouble processing your educational query right now. Please try rephrasing your study-related question, and I'll be happy to help with your coursework! 📚",
+      suggestions: [
+        "Try asking about a specific topic",
+        "Rephrase your question more clearly",
+        "Ask for help with course concepts"
+      ]
+    };
+  }
 };
+
+export async function chatWithSyllabus(
+  input: ChatWithSyllabusInput
+): Promise<ChatWithSyllabusOutput> {
+  return chatWithSyllabusFlow(input);
+}
