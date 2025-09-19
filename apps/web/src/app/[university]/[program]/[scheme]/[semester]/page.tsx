@@ -1,42 +1,92 @@
 "use client";
 
-import { useState } from "react";
+import { notFound } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, use } from "react";
+import { Header } from "@/components/common/Header";
+import { Breadcrumbs } from "@/components/common/Breadcrumbs";
 import {
   Card,
-  CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Info, GraduationCap, BookOpen, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useData } from "@/contexts/dataContext";
-import { Footer } from "@/components/common/Footer";
-import { Header } from "@/components/common/Header";
+  ArrowRight,
+  BookText,
+  Code,
+  FlaskConical,
+  Sigma,
+  Loader2,
+} from "lucide-react";
 import ErrorDisplay from "@/components/common/ErrorDisplay";
+import { AnimatedDiv } from "@/components/common/AnimatedDiv";
+import { Footer } from "@/components/common/Footer";
+// import { useGetDirectoryStructure } from "@/hooks/query";
+import { useData } from "@/contexts";
+
+interface SubjectsPageProps {
+  params: Promise<{
+    university: string;
+    program: string;
+    scheme: string;
+    semester: string;
+  }>;
+}
+
+interface DirectoryStructure {
+  [key: string]: any;
+}
+
+function findSemesterData(
+  directoryStructure: DirectoryStructure,
+  resolvedParams: {
+    university: string;
+    program: string;
+    scheme: string;
+    semester: string;
+  }
+): { university: any; program: any; scheme: any; semester: any } | null {
+  const {
+    university: universityId,
+    program: programId,
+    scheme: schemeId,
+    semester: semesterId,
+  } = resolvedParams;
+
+  const university = { id: universityId, name: capitalizeWords(universityId) };
+  const universityData = directoryStructure[universityId];
+  if (!universityData) return null;
+
+  const program = { id: programId, name: capitalizeWords(programId) };
+  const programData = universityData[programId];
+  if (!programData) return null;
+
+  const scheme = { id: schemeId, name: capitalizeWords(schemeId) };
+  const schemeData = programData[schemeId];
+  if (!schemeData) return null;
+
+  const semester = {
+    id: semesterId,
+    name: formatSemesterName(semesterId),
+    subjects: Array.isArray(schemeData[semesterId]?.subjects)
+      ? schemeData[semesterId].subjects
+      : [],
+  };
+  if (!schemeData[semesterId]) return null;
+
+  return { university, program, scheme, semester };
+}
 
 function capitalizeWords(str: string | undefined): string {
   if (!str) return "";
-  return str.replace(/-/g, " ").toUpperCase();
+  return str
+    .split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 function formatSemesterName(semesterId: string): string {
@@ -44,457 +94,174 @@ function formatSemesterName(semesterId: string): string {
   return `Semester ${semesterId.replace("s", "").replace(/^0+/, "")}`;
 }
 
-// Enhanced sorting function to handle various semester ID formats
-function getSemesterNumber(semesterId: string): number {
-  // Handle different formats: s1, s01, s2, sem1, semester1, 1, etc.
-  const cleaned = semesterId.toLowerCase().replace(/[^0-9]/g, '');
-  const num = Number.parseInt(cleaned, 10);
-  return Number.isNaN(num) ? 999 : num; // Put invalid entries at the end
-}
-
-const stepVariants = {
-  hidden: { opacity: 0, x: 50 },
-  visible: { opacity: 1, x: 0 },
-  exit: { opacity: 0, x: -50 },
+const getSubjectCategory = (subjectCode: string) => {
+  const code = subjectCode.toUpperCase();
+  if (code.startsWith("CS") || code.startsWith("IT"))
+    return { name: "Code", icon: <Code className="h-4 w-4" /> };
+  if (code.startsWith("MA"))
+    return { name: "Math", icon: <Sigma className="h-4 w-4" /> };
+  if (code.startsWith("PH") || code.startsWith("CY"))
+    return { name: "Science", icon: <FlaskConical className="h-4 w-4" /> };
+  return { name: "Core", icon: <BookText className="h-4 w-4" /> };
 };
 
-const MotionDiv = motion.div;
-
-export function SelectionForm() {
+export default function SubjectsPage({ params }: SubjectsPageProps) {
   const router = useRouter();
-  const { data: directoryStructure, isFetching, isError, error } = useData();
-  const [selectedUniversityId, setSelectedUniversityId] = useState<string | null>(null);
-  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null);
-  const [selectedSchemeId, setSelectedSchemeId] = useState<string | null>(null);
-  const [selectedSemesterId, setSelectedSemesterId] = useState<string | null>(null);
-  const [step, setStep] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState("");
+  const resolvedParams = use(params);
+  const [loadingSubject, setLoadingSubject] = useState<string | null>(null);
+  const { data, isFetching, isError, error } = useData();
 
-  const stepsConfig = [
-    { step: 1, label: "University" },
-    { step: 2, label: "Program" },
-    { step: 3, label: "Scheme" },
-    { step: 4, label: "Semester" },
-  ];
+  const handleViewSyllabus = async (subjectId: string, subjectName: string) => {
+    setLoadingSubject(subjectId);
 
-  const handleUniversitySelect = async (universityId: string) => {
-    setIsLoading(true);
-    setLoadingMessage("Loading programs...");
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    setSelectedUniversityId(universityId);
-    setIsLoading(false);
-    setStep(2);
-  };
+    await new Promise((resolve) => setTimeout(resolve, 700));
 
-  const handleProgramSelect = async (programId: string) => {
-    setIsLoading(true);
-    setLoadingMessage("Loading schemes...");
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    setSelectedProgramId(programId);
-    setIsLoading(false);
-    setStep(3);
-  };
-
-  const handleSchemeSelect = async (schemeId: string) => {
-    setIsLoading(true);
-    setLoadingMessage("Loading semesters...");
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    setSelectedSchemeId(schemeId);
-    setIsLoading(false);
-    setStep(4);
-  };
-
-  const handleSemesterSelect = (semesterId: string) => {
-    setSelectedSemesterId(semesterId);
-  };
-
-  const resetToLevel = (level: number) => {
-    if (level <= 1) {
-      setSelectedUniversityId(null);
-      setSelectedProgramId(null);
-      setSelectedSchemeId(null);
-      setSelectedSemesterId(null);
-    } else if (level === 2) {
-      setSelectedProgramId(null);
-      setSelectedSchemeId(null);
-      setSelectedSemesterId(null);
-    } else if (level === 3) {
-      setSelectedSchemeId(null);
-      setSelectedSemesterId(null);
-    } else if (level === 4) {
-      setSelectedSemesterId(null);
-    }
-    setStep(level);
-  };
-
-  if (isFetching) return;
-  if (isError)
-    return (
-      <ErrorDisplay
-        errorMessage={error?.message || "An error occurred while fetching data"}
-      />
+    router.push(
+      `/${resolvedParams.university}/${resolvedParams.program}/${resolvedParams.scheme}/${resolvedParams.semester}/${subjectId}`
     );
+  };
 
-  if (!directoryStructure || Object.keys(directoryStructure).length === 0) {
+  if (isFetching) {
     return (
-      <>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-mint-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-800">
         <Header />
-        <main className="container mx-auto px-4 py-12 md:py-20 flex justify-center items-center flex-1">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl font-bold mb-4">No Syllabus Data Found</h1>
-            <p className="text-muted-foreground">
-              Please ensure your 'universities' folder and its subdirectories
-              contain valid syllabus data.
-            </p>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p className="text-muted-foreground">Loading syllabus data...</p>
           </div>
-        </main>
-        <Footer />
-      </>
+        </div>
+      </div>
     );
   }
 
-  const selectedUniversityData = selectedUniversityId
-    ? directoryStructure[selectedUniversityId]
-    : null;
-  const selectedProgramData =
-    selectedUniversityData && selectedProgramId
-      ? selectedUniversityData[selectedProgramId]
-      : null;
-  const selectedSchemeData =
-    selectedProgramData && selectedSchemeId
-      ? selectedProgramData[selectedSchemeId]
-      : null;
+  if (isError || !data) {
+    return (
+      <ErrorDisplay
+        errorMessage={error?.message || "Could not fetch directory structure."}
+      />
+    );
+  }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      selectedUniversityId &&
-      selectedProgramId &&
-      selectedSchemeId &&
-      selectedSemesterId
-    ) {
-      setIsLoading(true);
-      setLoadingMessage("Loading syllabus modules...");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      router.push(
-        `/${selectedUniversityId}/${selectedProgramId}/${selectedSchemeId}/${selectedSemesterId}`
-      );
-    }
-  };
+  const dataPath = findSemesterData(data, resolvedParams);
+  if (!dataPath) {
+    notFound();
+  }
+
+  function capitalizeWords(str: string | undefined): string {
+    if (!str) return "";
+    return str
+      .replace(/-/g, " ")
+      .split(" ")
+      .map((word) =>
+        word.length > 0 ? word.charAt(0).toUpperCase() + word.slice(1) : ""
+      )
+      .join(" ");
+  }
+
+  const { university, program, scheme, semester } = dataPath;
+
+  // Build proper breadcrumb items with href for navigation
+  const breadcrumbItems = [
+    { label: "Home", href: "/" },
+    { label: "Select", href: "/select" },
+    { 
+      label: university.name, 
+      href: `/select?step=2&university=${resolvedParams.university}` 
+    },
+    { 
+      label: program.name, 
+      href: `/select?step=3&university=${resolvedParams.university}&program=${resolvedParams.program}` 
+    },
+    { 
+      label: scheme.name, 
+      href: `/select?step=4&university=${resolvedParams.university}&program=${resolvedParams.program}&scheme=${resolvedParams.scheme}` 
+    },
+    { label: semester.name }, // Current page - no href
+  ];
 
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-2xl rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 dark:from-gray-900 dark:to-gray-800 backdrop-blur-sm mt-[5vh]">
-      <div className="flex items-center justify-center flex-wrap gap-2 p-3 border-b border-muted">
-        {stepsConfig.map(({ step: stepNumber, label }, index) => {
-          const isActive = step === stepNumber;
-          const isCompleted = step > stepNumber;
-          return (
-            <div key={label} className="flex items-center">
-              <button
-                type="button"
-                disabled={!isCompleted && !isActive}
-                onClick={() => resetToLevel(stepNumber)}
-                className={cn(
-                  "px-2 py-1 rounded-full text-xs font-medium transition-all",
-                  isActive
-                    ? "bg-primary text-white"
-                    : isCompleted
-                    ? "bg-primary/10 text-primary hover:bg-primary/20"
-                    : "bg-muted text-muted-foreground cursor-not-allowed"
-                )}
-              >
-                {label}
-              </button>
-              {index < stepsConfig.length - 1 && (
-                <span className="mx-1 text-muted-foreground text-xs">›</span>
-              )}
+    <div className="flex flex-col min-h-screen mt-[10vh]">
+      <Header />
+      <main className="flex-1 container mx-auto px-4 py-8 md:py-12">
+        <AnimatedDiv>
+          <div className="max-w-6xl mx-auto">
+            <Breadcrumbs items={breadcrumbItems} />
+            <div className="mt-8 mb-12 text-center md:text-left">
+              <h1 className="text-3xl font-bold md:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
+                {semester.name} Subjects
+              </h1>
+              <p className="text-muted-foreground mt-2 text-lg">
+                {program.name} ({scheme.name}) &middot; {university.name}
+              </p>
             </div>
-          );
-        })}
-      </div>
 
-      <form onSubmit={handleSubmit}>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-xl md:text-2xl text-center font-bold">
-            Find Your Syllabus
-          </CardTitle>
-          <CardDescription className="text-center text-sm">
-            Follow the steps to find the curriculum for your course.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-6 flex items-center justify-center min-h-[350px] px-4">
-          <AnimatePresence mode="wait">
-            {isLoading ? (
-              <MotionDiv
-                key="loading"
-                variants={stepVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="w-full text-center space-y-4"
-              >
-                <div className="relative">
-                  <div className="w-16 h-16 mx-auto mb-4 relative">
-                    <div className="absolute inset-0 rounded-full border-4 border-primary/20 animate-pulse"/>
-                    <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin"/>
-                    <Loader2 className="w-6 h-6 text-primary absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-                  </div>
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    <h3 className="text-lg font-semibold text-primary">
-                      {loadingMessage}
-                    </h3>
-                    <p className="text-muted-foreground text-sm">
-                      Please wait while we prepare your content...
-                    </p>
-                  </motion.div>
-                </div>
-              </MotionDiv>
-            ) : (
-              <>
-                {step === 1 && (
-                  <MotionDiv
-                    key="step1"
-                    variants={stepVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="w-full flex items-start justify-center"
-                  >
-                    <div className="space-y-4 flex flex-col items-center justify-center rounded-2xl p-4">
-                      <Label className="text-lg font-bold text-center text-purple-900 dark:text-purple-200">
-                        1. Select Your University
-                      </Label>
-
-                      <Select onValueChange={handleUniversitySelect}>
-                        <SelectTrigger className="w-[280px] py-3 px-3 text-base font-medium rounded-xl border border-purple-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm hover:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all">
-                          <SelectValue placeholder="Choose a university" />
-                        </SelectTrigger>
-                        <SelectContent
-                          position="popper"
-                          side="bottom"
-                          align="center"
-                          sideOffset={4}
-                          alignOffset={0}
-                          avoidCollisions={false}
-                          className="w-[280px] rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg z-50 max-h-[200px] overflow-y-auto"
-                        >
-                          {Object.keys(directoryStructure).map((universityId) => (
-                            <SelectItem
-                              key={universityId}
-                              value={universityId}
-                              className="capitalize px-3 py-2 text-sm hover:bg-purple-100 dark:hover:bg-purple-800 rounded-lg cursor-pointer transition-colors"
-                            >
-                              {capitalizeWords(universityId)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </MotionDiv>
-                )}
-
-                {step === 2 && selectedUniversityData && (
-                  <MotionDiv
-                    key="step2"
-                    variants={stepVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="w-full"
-                  >
-                    <div className="space-y-4 flex flex-col items-center justify-center rounded-2xl p-4">
-                      <Label className="text-lg font-bold text-center text-purple-900 dark:text-purple-200">
-                        2. Choose Your Program
-                      </Label>
-
-                      <Select
-                        onValueChange={handleProgramSelect}
-                        value={selectedProgramId ?? ""}
-                      >
-                        <SelectTrigger className="w-[280px] py-3 px-3 text-base font-medium rounded-xl border border-purple-300 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm hover:border-purple-500 focus:ring-2 focus:ring-purple-500 transition-all">
-                          <SelectValue placeholder="Select Program" />
-                        </SelectTrigger>
-                        <SelectContent
-                          position="popper"
-                          side="bottom"
-                          align="center"
-                          sideOffset={4}
-                          alignOffset={0}
-                          avoidCollisions={false}
-                          className="w-[280px] rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg z-50 max-h-[200px] overflow-y-auto"
-                        >
-                          {Object.keys(selectedUniversityData).map((programId) => (
-                            <SelectItem
-                              key={programId}
-                              value={programId}
-                              className="capitalize px-3 py-2 text-sm hover:bg-purple-100 dark:hover:bg-purple-800 rounded-lg cursor-pointer transition-colors"
-                            >
-                              {capitalizeWords(programId)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </MotionDiv>
-                )}
-
-                {step === 3 && selectedProgramData && (
-                  <MotionDiv
-                    key="step3"
-                    variants={stepVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="w-full"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 justify-center">
-                        <Label htmlFor="scheme" className="text-base font-semibold">
-                          3. Select Your Scheme
-                        </Label>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                type="button"
-                                className="inline-flex items-center justify-center"
-                                aria-label="Scheme information"
-                              >
-                                <Info className="h-3 w-3 text-muted-foreground" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs">Your syllabus depends on the academic scheme you follow.</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        {Object.keys(selectedProgramData).map((schemeId) => (
-                          <motion.div
-                            key={schemeId}
-                            whileHover={{ scale: 1.02, y: -2 }}
-                            whileTap={{ scale: 0.98 }}
+            {semester.subjects.length > 0 ? (
+              <div className="grid justify-center grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 items-stretch max-w-[288px] mx-auto md:max-w-none md:mx-0">
+                {semester.subjects.map((subject: any) => {
+                  const category = getSubjectCategory(subject.code);
+                  const isLoading = loadingSubject === subject.id;
+                  return (
+                    <Card
+                      key={subject.id}
+                      className="h-full w-72 overflow-hidden flex flex-col justify-between rounded-2xl hover:border-primary hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 bg-white dark:bg-white/10 backdrop-blur-sm"
+                    >
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <CardTitle className="text-xl pr-4 break-words w-44">
+                            {capitalizeWords(subject.name)}
+                          </CardTitle>
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-1.5"
                           >
-                            <button
-                              type="button"
-                              className={cn(
-                                "w-full cursor-pointer border-transparent bg-transparent border-2 border-purple-700 hover:border-purple-500 hover:shadow-md hover:shadow-purple-500/30 hover:bg-gradient-to-br hover:from-purple-900 hover:to-purple-700 dark:hover:from-purple-800 dark:hover:to-purple-600 transition-all rounded-lg p-4 text-center focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2",
-                                selectedSchemeId === schemeId &&
-                                  "border-primary bg-primary/10"
-                              )}
-                              onClick={() => handleSchemeSelect(schemeId)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  handleSchemeSelect(schemeId);
-                                }
-                              }}
-                              aria-pressed={selectedSchemeId === schemeId}
-                              aria-label={`Select ${schemeId.replace(/-/g, " ")} scheme`}
-                            >
-                              <BookOpen className="h-8 w-8 text-primary mx-auto mb-2" />
-                              <p className="font-semibold capitalize text-sm">
-                                {schemeId.replace(/-/g, " ")}
-                              </p>
-                            </button>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  </MotionDiv>
-                )}
-
-                {step === 4 && selectedSchemeData && (
-                  <MotionDiv
-                    key="step4"
-                    variants={stepVariants}
-                    initial="hidden"
-                    animate="visible"
-                    exit="exit"
-                    className="w-full"
-                  >
-                    <div className="space-y-3">
-                      <Label className="text-base font-semibold text-center block">
-                        4. Pick Your Semester
-                      </Label>
-                      <RadioGroup
-                        value={selectedSemesterId ?? ""}
-                        className="grid grid-cols-2 gap-3 sm:grid-cols-4"
-                      >
-                        {Object.keys(selectedSchemeData)
-                          .sort((a, b) => getSemesterNumber(a) - getSemesterNumber(b))
-                          .map((semesterId) => {
-                            const handleSemesterClick = () => {
-                              handleSemesterSelect(semesterId);
-                              handleSubmit(new Event("submit") as unknown as React.FormEvent);
-                            };
-
-                            const handleKeyDown = (e: React.KeyboardEvent) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                handleSemesterClick();
-                              }
-                            };
-
-                            return (
-                              <button
-                                key={semesterId}
-                                type="button"
-                                className={cn(
-                                  "flex flex-col items-center justify-center hover:border-primary cursor-pointer border-2 border-purple-700 hover:border-purple-500 hover:shadow-md hover:shadow-purple-500/30 hover:bg-gradient-to-br hover:from-purple-900 hover:to-purple-700 dark:hover:from-purple-800 dark:hover:to-purple-600 transition-all rounded-lg p-4 text-center focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2",
-                                  selectedSemesterId === semesterId &&
-                                    "border-primary bg-primary/10"
-                                )}
-                                onClick={handleSemesterClick}
-                                onKeyDown={handleKeyDown}
-                                aria-pressed={selectedSemesterId === semesterId}
-                                aria-label={`Select ${formatSemesterName(semesterId)}`}
-                              >
-                                <RadioGroupItem
-                                  value={semesterId}
-                                  id={semesterId}
-                                  className="sr-only"
-                                />
-                                <BookOpen className="h-5 w-5 mb-1 text-primary" />
-                                <p className="font-semibold text-xs">
-                                  {formatSemesterName(semesterId)}
-                                </p>
-                              </button>
-                            );
-                          })}
-                      </RadioGroup>
-                    </div>
-                  </MotionDiv>
-                )}
-              </>
+                            {category.icon}
+                            {category.name}
+                          </Badge>
+                        </div>
+                        <CardDescription>{subject.code}</CardDescription>
+                      </CardHeader>
+                      <CardFooter>
+                        <Button
+                          onClick={() =>
+                            handleViewSyllabus(subject.id, subject.name)
+                          }
+                          disabled={isLoading}
+                          variant="ghost"
+                          className={`flex items-center text-sm font-medium text-primary group p-0 h-auto w-full justify-start transition-all duration-200 hover:bg-transparent ${
+                            isLoading
+                              ? "opacity-70 cursor-not-allowed animate-pulse"
+                              : "hover:text-primary/80"
+                          }`}
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              View Syllabus
+                              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                            </>
+                          )}
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <p className="text-muted-foreground">
+                  No subjects found for this semester.
+                </p>
+              </div>
             )}
-          </AnimatePresence>
-        </CardContent>
-
-        <CardFooter className="flex justify-between items-center bg-muted/50 p-3 rounded-b-2xl">
-          <Button
-            variant="ghost"
-            type="button"
-            size="sm"
-            onClick={() => {
-              if (step === 1) {
-                router.push("/");
-              } else {
-                resetToLevel(step - 1);
-              }
-            }}
-          >
-            Back
-          </Button>
-        </CardFooter>
-      </form>
-    </Card>
+          </div>
+        </AnimatedDiv>
+      </main>
+      <Footer />
+    </div>
   );
 }
