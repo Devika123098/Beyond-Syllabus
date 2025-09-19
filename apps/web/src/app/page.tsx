@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense, lazy } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { ScaleLoader} from 'react-spinners';
 import {
   GraduationCap,
   BookOpenCheck,
@@ -21,22 +22,7 @@ const FooterDark = lazy(() => import("@/components/common/footerDark").then(modu
 function ModernLoader(): JSX.Element {
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#030013] z-[9999]">
-      <div className="relative">
-        <div className="w-16 h-16 border-4 border-purple-200/20 border-t-purple-500 rounded-full animate-spin"/>
-        <div className="absolute top-2 left-2 w-12 h-12 border-4 border-transparent border-t-purple-400 rounded-full animate-spin animation-delay-200"/>
-        <div className="absolute top-4 left-4 w-8 h-8 border-4 border-transparent border-t-purple-300 rounded-full animate-spin animation-delay-400"/>
-      </div>
-      <style jsx>{`
-        .animation-delay-100 {
-          animation-delay: 0.1s;
-        }
-        .animation-delay-200 {
-          animation-delay: 0.2s;
-        }
-        .animation-delay-400 {
-          animation-delay: 0.4s;
-        }
-      `}</style>
+      <ScaleLoader color="rgb(133, 41, 255)"/>
     </div>
   );
 }
