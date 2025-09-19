@@ -23,6 +23,7 @@
     "@biomejs/biome": "^2.1.2",
     "oxlint": "^1.8.0",
     "turbo": "^2.5.4"
+    
   },
   "packageManager": "bun@1.2.12"
 }
