@@ -44,6 +44,14 @@ function formatSemesterName(semesterId: string): string {
   return `Semester ${semesterId.replace("s", "").replace(/^0+/, "")}`;
 }
 
+// Function to extract numeric value from semester ID for sorting
+function getSemesterNumber(semesterId: string): number {
+  // Remove all non-numeric characters and convert to number
+  const numericPart = semesterId.replace(/[^0-9]/g, '');
+  const num = Number.parseInt(numericPart, 10);
+  return Number.isNaN(num) ? 999 : num; // Put invalid entries at the end
+}
+
 const stepVariants = {
   hidden: { opacity: 0, x: 50 },
   visible: { opacity: 1, x: 0 },
@@ -420,45 +428,47 @@ export function SelectionForm() {
                         value={selectedSemesterId ?? ""}
                         className="grid grid-cols-2 gap-3 sm:grid-cols-4"
                       >
-                        {Object.keys(selectedSchemeData).map((semesterId) => {
-                          const handleSemesterClick = () => {
-                            handleSemesterSelect(semesterId);
-                            handleSubmit(new Event("submit") as unknown as React.FormEvent);
-                          };
+                        {Object.keys(selectedSchemeData)
+                          .sort((a, b) => getSemesterNumber(a) - getSemesterNumber(b))
+                          .map((semesterId) => {
+                            const handleSemesterClick = () => {
+                              handleSemesterSelect(semesterId);
+                              handleSubmit(new Event("submit") as unknown as React.FormEvent);
+                            };
 
-                          const handleKeyDown = (e: React.KeyboardEvent) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              handleSemesterClick();
-                            }
-                          };
+                            const handleKeyDown = (e: React.KeyboardEvent) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleSemesterClick();
+                              }
+                            };
 
-                          return (
-                            <button
-                              key={semesterId}
-                              type="button"
-                              className={cn(
-                                "flex flex-col items-center justify-center hover:border-primary cursor-pointer border-2 border-purple-700 hover:border-purple-500 hover:shadow-md hover:shadow-purple-500/30 hover:bg-gradient-to-br hover:from-purple-900 hover:to-purple-700 dark:hover:from-purple-800 dark:hover:to-purple-600 transition-all rounded-lg p-4 text-center focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2",
-                                selectedSemesterId === semesterId &&
-                                  "border-primary bg-primary/10"
-                              )}
-                              onClick={handleSemesterClick}
-                              onKeyDown={handleKeyDown}
-                              aria-pressed={selectedSemesterId === semesterId}
-                              aria-label={`Select ${formatSemesterName(semesterId)}`}
-                            >
-                              <RadioGroupItem
-                                value={semesterId}
-                                id={semesterId}
-                                className="sr-only"
-                              />
-                              <BookOpen className="h-5 w-5 mb-1 text-primary" />
-                              <p className="font-semibold text-xs">
-                                {formatSemesterName(semesterId)}
-                              </p>
-                            </button>
-                          );
-                        })}
+                            return (
+                              <button
+                                key={semesterId}
+                                type="button"
+                                className={cn(
+                                  "flex flex-col items-center justify-center hover:border-primary cursor-pointer border-2 border-purple-700 hover:border-purple-500 hover:shadow-md hover:shadow-purple-500/30 hover:bg-gradient-to-br hover:from-purple-900 hover:to-purple-700 dark:hover:from-purple-800 dark:hover:to-purple-600 transition-all rounded-lg p-4 text-center focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2",
+                                  selectedSemesterId === semesterId &&
+                                    "border-primary bg-primary/10"
+                                )}
+                                onClick={handleSemesterClick}
+                                onKeyDown={handleKeyDown}
+                                aria-pressed={selectedSemesterId === semesterId}
+                                aria-label={`Select ${formatSemesterName(semesterId)}`}
+                              >
+                                <RadioGroupItem
+                                  value={semesterId}
+                                  id={semesterId}
+                                  className="sr-only"
+                                />
+                                <BookOpen className="h-5 w-5 mb-1 text-primary" />
+                                <p className="font-semibold text-xs">
+                                  {formatSemesterName(semesterId)}
+                                </p>
+                              </button>
+                            );
+                          })}
                       </RadioGroup>
                     </div>
                   </MotionDiv>
