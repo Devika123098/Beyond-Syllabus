@@ -81,7 +81,7 @@ Module Content: "${input.moduleContent}"
       introductoryMessage: `Hello! I ran into some issues generating the introduction for "${input.moduleTitle}". You can try again or change the AI model if needed.`,
       suggestions: [
         `Try using a different AI model for "${input.moduleTitle}"`,
-        `Rephrase your module content and try again`,
+        "Rephrase your module content and try again",
         `What are the key topics in "${input.moduleTitle}"?`,
         "Can you provide a brief overview of this module?",
       ],
