@@ -284,15 +284,17 @@ export function SelectionForm() {
                           avoidCollisions={false}
                           className="w-[280px] rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg z-50 max-h-[200px] overflow-y-auto"
                         >
-                          {Object.keys(directoryStructure).map((universityId) => (
-                            <SelectItem
-                              key={universityId}
-                              value={universityId}
-                              className="capitalize px-3 py-2 text-sm hover:bg-purple-100 dark:hover:bg-purple-800 rounded-lg cursor-pointer transition-colors"
-                            >
-                              {capitalizeWords(universityId)}
-                            </SelectItem>
-                          ))}
+                          {Object.keys(directoryStructure)
+                            .sort((a, b) => capitalizeWords(a).localeCompare(capitalizeWords(b)))
+                            .map((universityId) => (
+                              <SelectItem
+                                key={universityId}
+                                value={universityId}
+                                className="capitalize px-3 py-2 text-sm hover:bg-purple-100 dark:hover:bg-purple-800 rounded-lg cursor-pointer transition-colors"
+                              >
+                                {capitalizeWords(universityId)}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -329,15 +331,17 @@ export function SelectionForm() {
                           avoidCollisions={false}
                           className="w-[280px] rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg z-50 max-h-[200px] overflow-y-auto"
                         >
-                          {Object.keys(selectedUniversityData).map((programId) => (
-                            <SelectItem
-                              key={programId}
-                              value={programId}
-                              className="capitalize px-3 py-2 text-sm hover:bg-purple-100 dark:hover:bg-purple-800 rounded-lg cursor-pointer transition-colors"
-                            >
-                              {capitalizeWords(programId)}
-                            </SelectItem>
-                          ))}
+                          {Object.keys(selectedUniversityData)
+                            .sort((a, b) => capitalizeWords(a).localeCompare(capitalizeWords(b)))
+                            .map((programId) => (
+                              <SelectItem
+                                key={programId}
+                                value={programId}
+                                className="capitalize px-3 py-2 text-sm hover:bg-purple-100 dark:hover:bg-purple-800 rounded-lg cursor-pointer transition-colors"
+                              >
+                                {capitalizeWords(programId)}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -376,36 +380,38 @@ export function SelectionForm() {
                         </TooltipProvider>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
-                        {Object.keys(selectedProgramData).map((schemeId) => (
-                          <motion.div
-                            key={schemeId}
-                            whileHover={{ scale: 1.02, y: -2 }}
-                            whileTap={{ scale: 0.98 }}
-                          >
-                            <button
-                              type="button"
-                              className={cn(
-                                "w-full cursor-pointer border-transparent bg-transparent border-2 border-purple-700 hover:border-purple-500 hover:shadow-md hover:shadow-purple-500/30 hover:bg-gradient-to-br hover:from-purple-900 hover:to-purple-700 dark:hover:from-purple-800 dark:hover:to-purple-600 transition-all rounded-lg p-4 text-center focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2",
-                                selectedSchemeId === schemeId &&
-                                  "border-primary bg-primary/10"
-                              )}
-                              onClick={() => handleSchemeSelect(schemeId)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  handleSchemeSelect(schemeId);
-                                }
-                              }}
-                              aria-pressed={selectedSchemeId === schemeId}
-                              aria-label={`Select ${schemeId.replace(/-/g, " ")} scheme`}
+                        {Object.keys(selectedProgramData)
+                          .sort((a, b) => a.localeCompare(b))
+                          .map((schemeId) => (
+                            <motion.div
+                              key={schemeId}
+                              whileHover={{ scale: 1.02, y: -2 }}
+                              whileTap={{ scale: 0.98 }}
                             >
-                              <BookOpen className="h-8 w-8 text-primary mx-auto mb-2" />
-                              <p className="font-semibold capitalize text-sm">
-                                {schemeId.replace(/-/g, " ")}
-                              </p>
-                            </button>
-                          </motion.div>
-                        ))}
+                              <button
+                                type="button"
+                                className={cn(
+                                  "w-full cursor-pointer border-transparent bg-transparent border-2 border-purple-700 hover:border-purple-500 hover:shadow-md hover:shadow-purple-500/30 hover:bg-gradient-to-br hover:from-purple-900 hover:to-purple-700 dark:hover:from-purple-800 dark:hover:to-purple-600 transition-all rounded-lg p-4 text-center focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2",
+                                  selectedSchemeId === schemeId &&
+                                    "border-primary bg-primary/10"
+                                )}
+                                onClick={() => handleSchemeSelect(schemeId)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    handleSchemeSelect(schemeId);
+                                  }
+                                }}
+                                aria-pressed={selectedSchemeId === schemeId}
+                                aria-label={`Select ${schemeId.replace(/-/g, " ")} scheme`}
+                              >
+                                <BookOpen className="h-8 w-8 text-primary mx-auto mb-2" />
+                                <p className="font-semibold capitalize text-sm">
+                                  {schemeId.replace(/-/g, " ")}
+                                </p>
+                              </button>
+                            </motion.div>
+                          ))}
                       </div>
                     </div>
                   </MotionDiv>
