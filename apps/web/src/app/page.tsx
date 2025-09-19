@@ -9,7 +9,6 @@ import {
   BarChart3,
   ChevronRight,
   Sparkles,
-  Loader2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,12 +26,6 @@ function ModernLoader(): JSX.Element {
         <div className="absolute top-2 left-2 w-12 h-12 border-4 border-transparent border-t-purple-400 rounded-full animate-spin animation-delay-200"/>
         <div className="absolute top-4 left-4 w-8 h-8 border-4 border-transparent border-t-purple-300 rounded-full animate-spin animation-delay-400"/>
       </div>
-      <div className="mt-6 flex space-x-1">
-        <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce"/>
-        <div className="w-2 h-2 bg-purple-400 rounded-full animate-bounce animation-delay-100"/>
-        <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce animation-delay-200"/>
-      </div>
-      <p className="mt-4 text-white text-lg font-medium">Loading Beyond Syllabus...</p>
       <style jsx>{`
         .animation-delay-100 {
           animation-delay: 0.1s;
@@ -44,18 +37,6 @@ function ModernLoader(): JSX.Element {
           animation-delay: 0.4s;
         }
       `}</style>
-    </div>
-  );
-}
-
-function ComponentLoader(): JSX.Element {
-  return (
-    <div className="flex items-center justify-center p-4">
-      <div className="flex space-x-2">
-        <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"/>
-        <div className="w-3 h-3 bg-purple-400 rounded-full animate-pulse animation-delay-100"/>
-        <div className="w-3 h-3 bg-purple-300 rounded-full animate-pulse animation-delay-200"/>
-      </div>
     </div>
   );
 }
@@ -96,24 +77,15 @@ export default function Home(): JSX.Element {
     router.push(path);
   };
 
+  if (isLoadingAssets) {
+    return <ModernLoader />;
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-[#030013]">
-      <Suspense fallback={<ComponentLoader />}>
+      <Suspense fallback={null}>
         <Header />
       </Suspense>
-
-      <AnimatePresence>
-        {isLoadingAssets && (
-          <motion.div
-            key="loader"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <ModernLoader />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <main className="flex-grow flex flex-col">
         <section
@@ -239,7 +211,7 @@ export default function Home(): JSX.Element {
         </section>
       </main>
       <div className="some-wrapper-class">
-        <Suspense fallback={<ComponentLoader />}>
+        <Suspense fallback={null}>
           {mounted && resolvedTheme === "dark" ? <FooterDark /> : <Footer />}
         </Suspense>
       </div>
