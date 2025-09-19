@@ -26,7 +26,7 @@ export function Footer() {
       className={`relative w-full shrink-0  bg-transparent ${bgStyle} bg-no-repeat bg-cover`}
     >
       {/* Optional overlay for better text visibility */}
-      <div className="absolute inset-0 "></div>
+      <div className="absolute inset-0 "/>
 
       {/* Footer Content */}
       <div className="container relative z-10 mx-auto px-4 md:px-6 py-8">
