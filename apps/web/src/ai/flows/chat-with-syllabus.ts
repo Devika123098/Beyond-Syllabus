@@ -11,8 +11,8 @@ export interface ChatWithSyllabusInput {
   history: Message[];
   message: string;
   model?: string;
-  syllabusContext?: string;
-  subjectArea?: string;
+  syllabusContext?: string; // Added for syllabus-specific context
+  subjectArea?: string; // Added to define subject boundaries
 }
 
 export interface ChatWithSyllabusOutput {
@@ -24,28 +24,79 @@ const chatWithSyllabusFlow = async (
   input: ChatWithSyllabusInput
 ): Promise<ChatWithSyllabusOutput> => {
   
-  // Very minimal filtering - only block obvious entertainment content
-  const isEntertainmentQuery = (message: string): boolean => {
-    const pureEntertainmentKeywords = [
-      'celebrity gossip', 'movie review', 'tv show recap', 'entertainment news',
-      'social media drama', 'fashion trends', 'lifestyle blog', 'dating advice',
-      'party planning', 'vacation photos', 'restaurant review', 'music album review'
+  // Enhanced content filtering for syllabus relevance
+  const isSyllabusRelevant = (message: string, subjectArea?: string): boolean => {
+    const offTopicKeywords = [
+      // Celebrities & Entertainment
+      'messi', 'ronaldo', 'celebrity', 'actor', 'singer', 'movie', 'film', 'tv show',
+      'netflix', 'youtube', 'instagram', 'tiktok', 'social media', 'influencer',
+      // Sports & Games
+      'football', 'soccer', 'basketball', 'cricket', 'tennis', 'gaming', 'game',
+      'video game', 'esports', 'fifa', 'fortnite',
+      // Personal & Social
+      'dating', 'relationship', 'personal life', 'gossip', 'fashion', 'beauty',
+      'lifestyle', 'travel', 'vacation', 'party', 'weekend plans',
+      // Non-academic topics
+      'politics', 'religion', 'current events', 'news', 'weather', 'food recipe',
+      'cooking', 'restaurant', 'shopping', 'money advice', 'investment'
+    ];
+
+    const academicKeywords = [
+      // Core academic terms
+      'explain', 'define', 'concept', 'theory', 'formula', 'equation', 'solve',
+      'calculate', 'understand', 'learn', 'study', 'homework', 'assignment',
+      'exam', 'test', 'quiz', 'chapter', 'lesson', 'course', 'syllabus',
+      // Subject-specific indicators
+      'algorithm', 'function', 'variable', 'analysis', 'research', 'experiment',
+      'theorem', 'proof', 'method', 'principle', 'law', 'rule', 'property'
     ];
 
     const messageLower = message.toLowerCase();
-    return pureEntertainmentKeywords.some(keyword => 
+    
+    // Check for off-topic content
+    const hasOffTopic = offTopicKeywords.some(keyword => 
       messageLower.includes(keyword)
     );
+    
+    // Check for academic content
+    const hasAcademic = academicKeywords.some(keyword => 
+      messageLower.includes(keyword)
+    );
+
+    // If subject area is specified, check relevance
+    if (subjectArea) {
+      const subjectKeywords = getSubjectKeywords(subjectArea);
+      const hasSubjectRelevance = subjectKeywords.some(keyword => 
+        messageLower.includes(keyword)
+      );
+      return !hasOffTopic && (hasAcademic || hasSubjectRelevance);
+    }
+
+    return !hasOffTopic && (hasAcademic || messageLower.length > 10);
   };
 
-  // Only block obvious entertainment queries
-  if (isEntertainmentQuery(input.message)) {
+  // Helper function to get subject-specific keywords
+  const getSubjectKeywords = (subject: string): string[] => {
+    const subjectMaps: Record<string, string[]> = {
+      'computer science': ['programming', 'coding', 'algorithm', 'data structure', 'database', 'software', 'computer', 'java', 'python', 'javascript'],
+      'mathematics': ['math', 'algebra', 'calculus', 'geometry', 'statistics', 'probability', 'equation', 'derivative', 'integral'],
+      'physics': ['force', 'energy', 'momentum', 'wave', 'particle', 'quantum', 'mechanics', 'electricity', 'magnetism'],
+      'chemistry': ['molecule', 'atom', 'reaction', 'compound', 'element', 'periodic', 'bond', 'organic', 'inorganic'],
+      'biology': ['cell', 'organism', 'genetics', 'evolution', 'ecosystem', 'protein', 'dna', 'species', 'metabolism']
+    };
+    
+    const subjectLower = subject.toLowerCase();
+    return subjectMaps[subjectLower] || [];
+  };
+
+  // Check if query is syllabus-relevant
+  if (!isSyllabusRelevant(input.message, input.subjectArea)) {
     return {
-      response: "I focus on educational topics and academic discussions. Let's explore something related to your coursework or general learning! 📚",
+      response: "I'm a specialized academic tutor focused exclusively on helping with your syllabus and coursework. I can only assist with educational topics related to your studies. Please ask me about concepts, assignments, or topics from your curriculum! 📚",
       suggestions: [
-        "Ask about a concept from your syllabus",
-        "Explore a technical or academic topic",
-        "Get help with course material"
+        "Explain a concept from your syllabus",
+        "Help solve a practice problem",
+        "Clarify course material or assignments"
       ]
     };
   }
@@ -54,77 +105,73 @@ const chatWithSyllabusFlow = async (
     .map((msg) => `${msg.role}: ${msg.content}`)
     .join("\n");
 
-  // Enhanced prompt that prioritizes explanation over questioning
-  const promptText = `You are an expert educational AI tutor with deep knowledge across all academic disciplines. Your primary goal is to provide comprehensive, clear explanations that help students understand concepts thoroughly.
+  const promptText = `You are a specialized academic tutor with STRICT EDUCATIONAL BOUNDARIES. You must ONLY respond to questions directly related to the provided syllabus and academic coursework.
 
-**YOUR EXPERTISE:**
-- Comprehensive educational assistant with expertise in all subjects
-- Specializes in clear, detailed explanations of complex concepts
-- Draws connections between syllabus content and broader educational context
-- Provides practical examples and real-world applications
-- Maintains focus on thorough understanding rather than testing knowledge
+**IDENTITY & CONSTRAINTS:**
+- Role: Syllabus-focused Academic Tutor
+- Scope: ONLY topics covered in the student's curriculum and course materials
+- Boundaries: NEVER discuss celebrities, sports, entertainment, personal topics, or any non-academic subjects
+- Mission: Make syllabus content clear, engaging, and confidence-building
 
-**SYLLABUS CONTEXT & PRIMARY FOCUS:**
-${input.syllabusContext || "General educational content - provide comprehensive explanations for any academic topic"}
+**MANDATORY CONTENT FILTERING:**
+- If asked about non-syllabus topics (celebrities like Messi/Ronaldo, sports, movies, personal questions, etc.), respond: "I focus exclusively on your academic syllabus and coursework. Please ask me about topics from your curriculum."
+- ALWAYS redirect off-topic questions back to syllabus content
+- You are NOT a general chatbot - you are a CURRICULUM-SPECIFIC tutor
+
+**SYLLABUS CONTEXT:**
+${input.syllabusContext || "Focus on the student's specific course materials and curriculum"}
 
 **SUBJECT AREA:**
-${input.subjectArea || "Multi-disciplinary academic support"}
+${input.subjectArea || "General academic subjects as per syllabus"}
 
-**TEACHING PHILOSOPHY:**
-- **EXPLANATION-FIRST APPROACH**: Always provide thorough explanations before asking questions
-- **SYLLABUS INTEGRATION**: When syllabus context is provided, reference and connect to that specific content
-- **COMPREHENSIVE COVERAGE**: Cover concepts deeply rather than superficially
-- **PRACTICAL CONNECTION**: Show how concepts apply in real-world scenarios
-- **CONFIDENCE BUILDING**: Help students feel confident in their understanding
+**STRUCTURED TEACHING APPROACH:**
 
-**RESPONSE STRUCTURE GUIDELINES:**
+📋 **Action Plan** (Start each response with 3-5 bullet points outlining your approach):
+- Assess if question relates to syllabus content
+- Break down the concept into digestible parts
+- Provide clear explanation with relevant examples
+- Create practice opportunity
+- Reinforce understanding
 
-1. **IMMEDIATE EXPLANATION** (Primary Focus - 70% of response):
-   - Start with a clear, comprehensive explanation of the concept or topic
-   - Use the provided syllabus context to give specific, relevant examples
-   - Include background information and context when helpful
-   - Provide multiple perspectives or approaches when relevant
-   - Use analogies and practical examples to clarify complex ideas
+**Teaching Workflow:**
+1. 🎯 **ASSESS**: Confirm the topic is syllabus-relevant and identify key learning objectives
+2. 🧑‍🏫 **TEACH**: Provide clear, structured explanation using syllabus terminology and concepts
+   - Use examples from the course material when possible
+   - Keep explanations focused and concise (100-200 words)
+3. 📝 **PRACTICE**: Create a short, syllabus-aligned practice problem or question
+   - Make it relevant to course assessments
+   - Offer hints if requested
+4. ✅ **CHECK**: Review answers with step-by-step reasoning
+   - Highlight common misconceptions from the subject area
+   - Connect back to syllabus learning objectives
+5. 🔄 **REFLECT**: Encourage learner to explain the concept in their own words
 
-2. **SYLLABUS CONNECTION** (When available):
-   - Explicitly reference how the topic relates to the provided syllabus content
-   - Show how this concept fits into the broader course structure
-   - Mention prerequisite knowledge or upcoming related topics from the syllabus
-
-3. **PRACTICAL APPLICATION** (Supporting element):
-   - Show real-world applications and relevance
-   - Provide concrete examples that students can relate to
-   - Demonstrate how the concept is used in professional or academic contexts
-
-4. **MINIMAL QUESTIONING** (Only if essential):
-   - Limit questions to 1 maximum per response
-   - Only ask questions that genuinely help clarify the student's specific needs
-   - Avoid generic "Do you understand?" type questions
-   - Focus on actionable next steps rather than testing comprehension
+**RESPONSE GUIDELINES:**
+- Maximum 250 words per response to maintain focus
+- Use bullet points for clarity
+- Include ONE relevant emoji per section (maximum 3 total)
+- End with 2-3 follow-up questions that deepen syllabus understanding
+- Stay within the bounds of the provided curriculum
 
 **CONVERSATION HISTORY:**
 ${conversationHistory}
 
 **STUDENT QUESTION:** "${input.message}"
 
-**SPECIFIC INSTRUCTIONS:**
-- Provide a thorough, detailed explanation (300-500 words) that fully addresses the question
-- If syllabus context is provided, integrate it prominently into your explanation
-- Use specific examples from the syllabus material when available
-- Make connections between the current topic and broader syllabus concepts
-- Prioritize teaching and explaining over questioning
-- If you must ask a question, make it specific and actionable (max 1 question)
-- End with practical next steps or related concepts to explore
-- Be comprehensive rather than conversational
+**INSTRUCTIONS:**
+1. Verify this question relates to syllabus content
+2. If non-syllabus, redirect to curriculum topics
+3. If syllabus-relevant, follow the structured teaching approach above
+4. Keep all content within the academic scope provided
 
-Generate a detailed educational explanation now:`;
+Generate your tutoring response now:`;
 
   try {
     const chatCompletion = await ai.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: "You are an expert educational AI tutor who excels at providing comprehensive, detailed explanations. Your strength is in thorough teaching rather than questioning. Always prioritize clear, complete explanations that integrate syllabus content when available. Minimize questions and maximize educational value through detailed explanations."
+          content: "You are a syllabus-focused academic tutor who ONLY helps with curriculum-related topics and coursework. You must refuse to discuss any non-academic subjects and always redirect to syllabus content."
         },
         {
           role: "user", 
@@ -132,94 +179,72 @@ Generate a detailed educational explanation now:`;
         }
       ],
       model: input.model || "llama-3.1-8b-instant",
-      temperature: 0.3, // Lower temperature for more focused, detailed explanations
-      max_completion_tokens: 1536, // Increased for more comprehensive responses
+      temperature: 0.3, // Lower for more consistent, focused responses
+      max_completion_tokens: 1024, // Reduced for concise responses
       top_p: 0.8,
     });
 
     const outputText = chatCompletion.choices?.[0]?.message?.content || "";
 
-    // Only check for obvious entertainment content in responses
-    const entertainmentResponseCheck = /\b(celebrity gossip|entertainment news|fashion trends|social media drama)\b/i;
-    if (entertainmentResponseCheck.test(outputText)) {
+    // Additional safety check for non-academic content
+    const offTopicCheck = /\b(messi|ronaldo|celebrity|entertainment|sports|movie|politics|dating|gaming)\b/i;
+    if (offTopicCheck.test(outputText)) {
       return {
-        response: "I'm here to provide detailed explanations on educational and academic topics. What concept or topic from your coursework would you like me to explain in depth? 📚",
+        response: "I'm designed to focus exclusively on your syllabus and academic coursework. Let's discuss topics from your curriculum instead! What concept from your course materials would you like me to explain? 📚",
         suggestions: [
-          "Ask about a specific concept from your syllabus",
-          "Explore a technical or theoretical topic",
-          "Get detailed explanations of course material"
+          "Ask about a specific chapter or topic",
+          "Request help with course assignments",
+          "Clarify concepts from your syllabus"
         ]
       };
     }
 
-    // Generate contextual suggestions that promote deeper learning
-    const generateSuggestions = (subjectArea?: string, syllabusContext?: string): string[] => {
-      // If we have syllabus context, make suggestions more specific
-      if (syllabusContext && syllabusContext.trim() !== "General academic and educational support") {
-        return [
-          "Explain related concepts from the syllabus",
-          "Show practical applications of this topic",
-          "Connect this to other syllabus topics"
-        ];
-      }
+    // Generate contextual suggestions based on subject area
+    const generateSuggestions = (subjectArea?: string): string[] => {
+      const baseSuggestions = [
+        "Can you explain this topic differently?",
+        "Give me a practice problem on this",
+        "What are common mistakes to avoid?"
+      ];
 
-      // Subject-specific suggestions focused on deeper exploration
       if (subjectArea) {
         const subjectSuggestions: Record<string, string[]> = {
           'computer science': [
-            "Explain the underlying algorithms or data structures",
-            "Show implementation examples and best practices",
-            "Discuss real-world applications and use cases"
+            "Show me the algorithm step-by-step",
+            "Can you trace through this code?",
+            "What's the time complexity?"
           ],
           'mathematics': [
-            "Demonstrate with step-by-step worked examples",
-            "Explain the theoretical foundations",
-            "Show applications in other fields"
+            "Show me another example problem",
+            "What's the underlying principle?",
+            "How do I apply this formula?"
           ],
           'physics': [
-            "Provide visual explanations with diagrams",
-            "Explain the fundamental principles",
-            "Discuss real-world applications and phenomena"
-          ],
-          'chemistry': [
-            "Explain the molecular mechanisms",
-            "Show reaction pathways and processes",
-            "Discuss industrial or biological applications"
-          ],
-          'biology': [
-            "Explain the biological processes in detail",
-            "Show connections to other biological systems",
-            "Discuss medical or ecological applications"
+            "Can you draw a diagram?",
+            "What are the key equations?",
+            "How does this apply in real scenarios?"
           ]
         };
         
-        return subjectSuggestions[subjectArea.toLowerCase()] || [
-          "Provide more detailed explanations",
-          "Show practical applications",
-          "Explore related concepts in depth"
-        ];
+        return subjectSuggestions[subjectArea.toLowerCase()] || baseSuggestions;
       }
       
-      return [
-        "Explain related concepts in more detail",
-        "Show practical applications and examples",
-        "Explore connections to other topics"
-      ];
+      return baseSuggestions;
     };
 
     return {
       response: outputText,
-      suggestions: generateSuggestions(input.subjectArea, input.syllabusContext)
+      suggestions: generateSuggestions(input.subjectArea)
     };
 
   } catch (e) {
-    console.error("Error in educational chat flow:", e);
+    console.error("Error in syllabus chat flow:", e);
     return {
-      response: "I'm here to provide detailed explanations on any educational topic! Whether it's from your syllabus or general academic curiosity, I can help explain concepts thoroughly with examples and practical applications. What would you like me to explain? 📚",
+      response: "I'm having trouble processing your academic query. Please try rephrasing your question about the course material, and I'll help you understand the syllabus content better! 📚",
       suggestions: [
-        "Ask for detailed concept explanations",
-        "Request examples and practical applications",
-        "Explore topics from your coursework"
+        "Ask about a specific course topic",
+        "Request clarification on assignments",
+        "Inquire about syllabus concepts"
       ]
     };
   }
