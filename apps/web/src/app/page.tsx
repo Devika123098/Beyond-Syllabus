@@ -20,9 +20,28 @@ const Footer = lazy(() => import("@/components/common/Footer").then(module => ({
 const FooterDark = lazy(() => import("@/components/common/footerDark").then(module => ({ default: module.FooterDark })));
 
 function ModernLoader(): JSX.Element {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#030013] z-[9999]">
-      <ScaleLoader color="rgb(133, 41, 255)"/>
+    <div 
+      className={`fixed inset-0 flex flex-col items-center justify-center z-[9999] ${
+        mounted && resolvedTheme === "light" 
+          ? "bg-white" 
+          : "bg-[#030013]"
+      }`}
+    >
+      <ScaleLoader 
+        color={
+          mounted && resolvedTheme === "light" 
+            ? "rgb(133, 41, 255)" 
+            : "rgb(133, 41, 255)"
+        }
+      />
     </div>
   );
 }
